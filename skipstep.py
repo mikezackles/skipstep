@@ -36,23 +36,24 @@ class StepSkipper:
         return False
 
     def should_stop(self, event):
+        # If the plan isn't done, we definitely shouldn't stop
+        if not self.step_thread_plan.IsPlanComplete():
+            return False
+
         line = self.get_frame(self.thread_plan).GetLineEntry()
         filespec = line.GetFileSpec()
         directory = pathlib.Path(filespec.GetDirectory())
-        is_allowed = self.is_in_whitelist(directory)
 
-        if is_allowed:
+        if self.is_in_whitelist(directory):
             print("Stopping at {}:{}:{}".format(
                 filespec.GetFilename(), line.GetLine(), line.GetColumn()))
+            self.thread_plan.SetPlanComplete(True)
+            return True
         else:
             print("Skipping {}:{}:{}".format(filespec.GetFilename(),
                                              line.GetLine(), line.GetColumn()))
-
-        # ONLY queue another plan if we're skipping through code
-        if not is_allowed and self.step_thread_plan.IsPlanComplete():
             self.queue_next_plan()
-
-        return is_allowed
+            return False
 
     def should_step(self):
         # Instruct the debugger to instruction step
